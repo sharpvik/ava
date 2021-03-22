@@ -1,22 +1,22 @@
 package main
 
 import (
+	"github.com/joho/godotenv"
 	"github.com/sharpvik/log-go/v2"
 
 	"github.com/sharpvik/ava/configs"
 	"github.com/sharpvik/ava/server"
 )
 
-// mustInit is responsible for the primary and the most essential initialization
-// code that has to run properly.
-func mustInit() (config configs.Config) {
+func init() {
 	log.SetLevel(log.LevelDebug)
-	config = configs.MustInit()
-	return
+	if err := godotenv.Load(); err != nil {
+		log.Error(err)
+	}
 }
 
 func main() {
-	config := mustInit()
+	config := configs.MustInit()
 	log.Debug("init successfull")
 
 	serv := server.NewServer(config.Server)

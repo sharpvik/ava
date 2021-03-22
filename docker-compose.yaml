@@ -1,8 +1,11 @@
+# Example docker-compose file.
 version: "3"
 
 services:
   srv:
     container_name: ava_srv
-    build: .
+    build: . # sharpvik/ava:latest
+    env_file:
+      - .env # not mandatory, but recommended (see README.md)
     ports:
       - 42069:42069

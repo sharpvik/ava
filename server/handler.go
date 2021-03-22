@@ -7,31 +7,49 @@ import (
 	"net/http"
 	"path/filepath"
 
+	"github.com/sharpvik/ava/auth"
 	"github.com/sharpvik/log-go/v2"
 	"github.com/sharpvik/mux"
 )
 
 // newServerHandler returns the main server handler responsible for the API.
-func newServerHandler(storageDir http.Dir) http.Handler {
-	handler := &handler{string(storageDir)}
+func newServerHandler(apiKey string, storageDir http.Dir) http.Handler {
+	handler := &handler{
+		apiKey:     apiKey,
+		storageDir: string(storageDir),
+	}
+	handler.authorized = authorizedHandler(handler)
+	return handler
+}
 
+type handler struct {
+	apiKey     string
+	storageDir string
+	authorized http.Handler
+}
+
+func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if auth.Auth(h.apiKey, r) {
+		h.authorized.ServeHTTP(w, r)
+	} else {
+		http.NotFound(w, r)
+	}
+}
+
+func authorizedHandler(h *handler) http.Handler {
 	rtr := mux.New().UseFunc(logRequest(""))
 
 	rtr.Subrouter().
 		Methods(http.MethodPost).
 		Path("/upload/{ext:jpg|png}").
-		HandleFunc(handler.upload)
+		HandleFunc(h.upload)
 
 	rtr.Subrouter().
 		Methods(http.MethodGet).
 		Path(`/download/{name:.+\.(jpg|png)}`).
-		HandleFunc(handler.download)
+		HandleFunc(h.download)
 
 	return rtr
-}
-
-type handler struct {
-	storageDir string
 }
 
 func (h *handler) upload(w http.ResponseWriter, r *http.Request) {

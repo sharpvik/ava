@@ -22,10 +22,10 @@ type Server struct {
 }
 
 // NewServer returns appropriate server based on the mode and configs.
-func NewServer(config configs.Server) (s *Server) {
+func NewServer(config *configs.Server) (s *Server) {
 	s = NewBasicServer()
 	s.setMode(config.DevMode)
-	s.server.Handler = newServerHandler(config.StorageDir)
+	s.server.Handler = newServerHandler(config.APIKey, config.StorageDir)
 	return
 }
 
