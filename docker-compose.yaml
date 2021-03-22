@@ -1,0 +1,8 @@
+version: "3"
+
+services:
+  srv:
+    container_name: ava_srv
+    build: .
+    ports:
+      - 42069:42069
