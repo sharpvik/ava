@@ -26,7 +26,7 @@ COPY --from=server_builder /app/serve /ava/serve
 #     --> serve*
 #
 # Exposing default HTTP port.
-EXPOSE 80
+EXPOSE 42069
 
 
 # Start the server.
