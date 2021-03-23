@@ -4,15 +4,15 @@ The microservice for storing your users' avatars (or any kind of images for that
 matter).
 
 Start it up via Docker or `docker-compose`. It will listen on port `42069`.
-You could create a `.env` file where you _may or may not_ specify an `API_KEY`
-variable like so:
+You could create a `.env` file where you _may or may not_ specify an
+`AVA_API_KEY` variable like so:
 
 ```bash
 # .env
-API_KEY=mySuperSecretAPIKey
+AVA_API_KEY=mySuperSecretAPIKey
 ```
 
-If you don't specify any `API_KEY` it is assumed to be `""` and therefore, any
+If you don't specify any `AVA_API_KEY` it is assumed to be `""` and any
 request with a missing `Ava-API-Key` header will be authorized to proceed.
 
 ## API
@@ -22,7 +22,7 @@ POST /upload/jpg
 ```
 
 Put your image file into the request body and enjoy. This will respond with a
-simple string (e.g. `166ebdf66f4174b5.jpg`)ethat you'll be able to use to
+simple string (e.g. `166ebdf66f4174b5.jpg`) that you'll be able to use to
 retrieve the image.
 
 ```
