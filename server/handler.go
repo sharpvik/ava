@@ -7,41 +7,47 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"github.com/sharpvik/ava/auth"
 	"github.com/sharpvik/log-go/v2"
 	"github.com/sharpvik/mux"
+
+	"github.com/sharpvik/ava/auth"
+	"github.com/sharpvik/ava/configs"
 )
 
-// newServerHandler returns the main server handler responsible for the API.
-func newServerHandler(apiKey string, storageDir http.Dir) http.Handler {
-	handler := &handler{
-		apiKey:     apiKey,
-		storageDir: string(storageDir),
-	}
-	handler.authorized = authorizedHandler(handler)
-	return handler
-}
-
 type handler struct {
-	apiKey     string
-	storageDir string
+	*configs.Server
 	authorized http.Handler
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if auth.Auth(h.apiKey, r) {
-		h.authorized.ServeHTTP(w, r)
-	} else {
-		http.NotFound(w, r)
+	if !auth.Auth(h.APIKey, r) {
+		respondWithStatusAndMessage(w,
+			http.StatusUnauthorized, "401 Unauthorized - Wrong API Key")
+		return
 	}
+	if !h.bodySizeUnderLimit(r) {
+		respondWithStatusAndMessage(w,
+			http.StatusBadRequest, "400 Bad Request - Image Size Too Big")
+		return
+	}
+	h.authorized.ServeHTTP(w, r)
 }
 
-func authorizedHandler(h *handler) http.Handler {
+// newServerHandler returns the main server handler responsible for the API.
+func newServerHandler(config *configs.Server) http.Handler {
+	handler := &handler{
+		Server: config,
+	}
+	handler.authorized = handler.authorizedHandler()
+	return handler
+}
+
+func (h *handler) authorizedHandler() http.Handler {
 	rtr := mux.New().UseFunc(logRequest(""))
 
 	rtr.Subrouter().
 		Methods(http.MethodPost).
-		Path("/upload/{ext:jpg|png}").
+		Path(`/upload/{ext:\w+}`).
 		HandleFunc(h.upload)
 
 	rtr.Subrouter().
@@ -58,10 +64,19 @@ func (h *handler) upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	name := newImageName(vars["ext"].(string))
+	ext := vars["ext"].(string)
+	if !h.extensionIsAllowed(ext) {
+		respondWithStatusAndMessage(w,
+			http.StatusForbidden, "403 Forbidden - Extension Not Allowed")
+		return
+	}
+
+	name := newImageName(ext)
 	if err := h.saveImage(r.Body, name); err != nil {
 		log.Errorf("failed to save image: %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		respondWithStatusAndMessage(w,
+			http.StatusInternalServerError,
+			"500 Internal Server Error - Failed To Save Image")
 		return
 	}
 
@@ -78,11 +93,13 @@ func (h *handler) download(w http.ResponseWriter, r *http.Request) {
 	file, err := h.lookupFile(name)
 	if err != nil {
 		log.Errorf("failed to find/open image: %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		respondWithStatusAndMessage(w,
+			http.StatusInternalServerError,
+			"500 Internal Server Error - Cannot Find Image")
 		return
 	}
-	defer file.Close()
 
+	defer file.Close()
 	w.Header().Set("Content-Type", mime.TypeByExtension(filepath.Ext(name)))
 	io.Copy(w, file)
 }

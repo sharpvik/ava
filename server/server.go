@@ -25,7 +25,7 @@ type Server struct {
 func NewServer(config *configs.Server) (s *Server) {
 	s = NewBasicServer()
 	s.setMode(config.DevMode)
-	s.server.Handler = newServerHandler(config.APIKey, config.StorageDir)
+	s.server.Handler = newServerHandler(config)
 	return
 }
 

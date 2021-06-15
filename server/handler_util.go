@@ -25,7 +25,7 @@ func newImageName(ext string) string {
 }
 
 func (h *handler) pathToFile(name string) string {
-	return path.Join(h.storageDir, name)
+	return path.Join(string(h.StorageDir), name)
 }
 
 func (h *handler) saveImage(image io.Reader, name string) (err error) {
@@ -51,4 +51,26 @@ func getVars(r *http.Request) (vars map[string]interface{}, err error) {
 		err = msg
 	}
 	return
+}
+
+func (h *handler) extensionIsAllowed(ext string) bool {
+	for _, e := range h.Extensions {
+		if e == ext {
+			return true
+		}
+	}
+	return false
+}
+
+func (h *handler) bodySizeUnderLimit(r *http.Request) bool {
+	if h.SizeLimit <= 0 {
+		return true
+	}
+	return r.ContentLength <= h.SizeLimit
+}
+
+func respondWithStatusAndMessage(
+	w http.ResponseWriter, status int, message string) {
+	w.WriteHeader(status)
+	fmt.Fprint(w, message)
 }
